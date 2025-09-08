@@ -26,26 +26,25 @@ class SocialImageButton extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: _launchURL,
-        borderRadius: BorderRadius.circular(50),
+        borderRadius: BorderRadius.circular(12), // Rounded rectangle ripple
         child: Container(
-          width: 50, // button size
-          height: 50,
+          width: 30, // button size
+          height: 30,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
+            color: Colors.white, // Optional background color
+            borderRadius: BorderRadius.circular(12), // Rectangle with rounded corners
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 4,
+                color: Colors.grey.withOpacity(0.2),
+                blurRadius: 6,
                 offset: const Offset(2, 2),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(8), // adds spacing around the image
-          child: ClipOval(
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain, // ensures full image is visible
-            ),
+          padding: const EdgeInsets.all(4), // spacing around image
+          child: Image.asset(
+            imagePath,
+            fit: BoxFit.cover, // Fills rectangle better
           ),
         ),
       ),

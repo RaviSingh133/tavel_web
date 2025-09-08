@@ -10,7 +10,7 @@ class RImages{
 
 
   /// about images
-  static const String img1 = "asset/about_images/oner img.jpg";
+  static const String img1 = "asset/about_images/image1.jpg";
   static const String img2 = "asset/about_images/vid1.mp4";
 
   /// contact

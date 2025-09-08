@@ -1,6 +1,8 @@
+// lib/screens/query_form.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../Theme/theme.dart';
-import '../google_sheets_api.dart';
+import '../../google_sheets_services.dart';
 
 class QueryForm extends StatefulWidget {
   const QueryForm({super.key});
@@ -10,18 +12,37 @@ class QueryForm extends StatefulWidget {
 }
 
 class _QueryFormState extends State<QueryForm> {
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController whatsappController = TextEditingController();
   final TextEditingController destinationController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
 
-  final GoogleSheetsApi sheetService = GoogleSheetsApi(
-    webAppUrl: "https://corsproxy.io/?https://script.google.com/macros/s/AKfycbws4SneOvtZFNVi57YhxfJbZoU2Wkg46P4FWSq9c4iChFuHqatQ0E5i8t4Jcxb9s8Rqfg/exec",
-  );
-
+  // Focus nodes for manual focus
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _emailFocus = FocusNode();
+  final FocusNode _whatsappFocus = FocusNode();
+  final FocusNode _destinationFocus = FocusNode();
+  final FocusNode _dateFocus = FocusNode();
 
   bool _isLoading = false;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    whatsappController.dispose();
+    destinationController.dispose();
+    dateController.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _whatsappFocus.dispose();
+    _destinationFocus.dispose();
+    _dateFocus.dispose();
+    super.dispose();
+  }
 
   /// Pick travel date
   Future<void> selectDate(BuildContext context) async {
@@ -34,33 +55,79 @@ class _QueryFormState extends State<QueryForm> {
 
     if (pickedDate != null) {
       setState(() {
-        dateController.text =
-        "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+        dateController.text = DateFormat('dd MMM yyyy').format(pickedDate);
       });
     }
   }
 
+  /// Validate one field at a time and focus
+  bool _validateAndFocusSingle() {
+    // Name
+    if (nameController.text.trim().isEmpty) {
+      FocusScope.of(context).requestFocus(_nameFocus);
+      _showSnackBar("Please enter your name");
+      return false;
+    }
+
+    // Email
+    if (emailController.text.trim().isEmpty) {
+      FocusScope.of(context).requestFocus(_emailFocus);
+      _showSnackBar("Please enter your email");
+      return false;
+    }
+    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(emailController.text)) {
+      FocusScope.of(context).requestFocus(_emailFocus);
+      _showSnackBar("Enter a valid email");
+      return false;
+    }
+
+    // WhatsApp
+    if (whatsappController.text.trim().isEmpty) {
+      FocusScope.of(context).requestFocus(_whatsappFocus);
+      _showSnackBar("Please enter your WhatsApp number");
+      return false;
+    }
+    if (whatsappController.text.length < 10) {
+      FocusScope.of(context).requestFocus(_whatsappFocus);
+      _showSnackBar("Enter a valid number");
+      return false;
+    }
+
+    // Destination
+    if (destinationController.text.trim().isEmpty) {
+      FocusScope.of(context).requestFocus(_destinationFocus);
+      _showSnackBar("Please enter your destination");
+      return false;
+    }
+
+    // Date
+    if (dateController.text.trim().isEmpty) {
+      FocusScope.of(context).requestFocus(_dateFocus);
+      _showSnackBar("Please select travel date");
+      return false;
+    }
+
+    return true; // All good
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   /// Send data to Google Sheets
   Future<void> sendData() async {
-    if (nameController.text.isEmpty ||
-        emailController.text.isEmpty ||
-        whatsappController.text.isEmpty ||
-        destinationController.text.isEmpty ||
-        dateController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Please fill all fields")),
-      );
-      return;
-    }
+    if (!_validateAndFocusSingle()) return; // Validate step-by-step
 
     setState(() => _isLoading = true);
 
-    bool success = await sheetService.appendRow(
-      name: nameController.text,
-      email: emailController.text,
-      whatsapp: whatsappController.text,
-      destination: destinationController.text,
-      travelDate: dateController.text,
+    bool success = await GoogleSheetsService.saveQuery(
+      name: nameController.text.trim(),
+      email: emailController.text.trim(),
+      whatsapp: whatsappController.text.trim(),
+      destination: destinationController.text.trim(),
+      travelDate: dateController.text.trim(),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +142,6 @@ class _QueryFormState extends State<QueryForm> {
     setState(() => _isLoading = false);
   }
 
-  /// Clear all fields
   void _clearFields() {
     nameController.clear();
     emailController.clear();
@@ -109,39 +175,60 @@ class _QueryFormState extends State<QueryForm> {
             children: [
               Row(
                 children: [
-                  Expanded(child: _buildTextField("Your Name", nameController)),
+                  Expanded(
+                    child: _buildTextField(
+                      label: "Your Name",
+                      controller: nameController,
+                      focusNode: _nameFocus,
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: _buildTextField("Your Email", emailController)),
+                  Expanded(
+                    child: _buildTextField(
+                      label: "Your Email",
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      focusNode: _emailFocus,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                      child: _buildTextField(
-                          "Your WhatsApp Number", whatsappController,
-                          keyboardType: TextInputType.phone)),
+                    child: _buildTextField(
+                      label: "WhatsApp Number",
+                      controller: whatsappController,
+                      focusNode: _whatsappFocus,
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
-                      child: _buildTextField(
-                          "Travel Destination", destinationController)),
+                    child: _buildTextField(
+                      label: "Travel Destination",
+                      controller: destinationController,
+                      focusNode: _destinationFocus,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: dateController,
+                focusNode: _dateFocus,
                 readOnly: true,
                 onTap: () => selectDate(context),
                 decoration: const InputDecoration(
-                  hintText: "Travel Date",
-                  hintStyle: TextStyle(color: Colors.black54),
+                  labelText: "Travel Date",
+                  suffixIcon: Icon(Icons.calendar_today, color: Colors.black),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.black),
                   ),
                   focusedBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.black),
                   ),
-                  suffixIcon: Icon(Icons.calendar_today, color: Colors.black),
                 ),
                 style: const TextStyle(color: Colors.black),
               ),
@@ -166,13 +253,17 @@ class _QueryFormState extends State<QueryForm> {
                     shape: const StadiumBorder(),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
                       : const Text(
                     "Send Query",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: DefaultColors.queryColor,
-                    ),
+                    style: TextStyle(fontSize: 16),
                   ),
                 ),
               ),
@@ -183,15 +274,18 @@ class _QueryFormState extends State<QueryForm> {
     );
   }
 
-  /// Custom text field builder
-  Widget _buildTextField(String hint, TextEditingController controller,
-      {TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black54),
+        labelText: label,
         enabledBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.black),
         ),

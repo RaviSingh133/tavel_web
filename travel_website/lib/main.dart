@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:travel_application/landing_page/landing_page.dart';
-import 'package:travel_application/landing_page/widgets/background.dart';
 
 import 'Theme/theme.dart';
-import 'landing_page/widgets/contact.dart';
 
 void main() {
   runApp(const MyApp());

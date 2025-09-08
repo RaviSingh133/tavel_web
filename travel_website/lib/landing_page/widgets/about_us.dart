@@ -93,13 +93,9 @@ class ResponsiveRow extends StatelessWidget {
           ? VideoPlayerWidget(videoPath: mediaPath)
           : Image.asset(
         mediaPath,
-        fit: isMobile ? BoxFit.contain : BoxFit.cover,
-        width: screenWidth * 0.3,
-        height: isMobile
-            ? null
-            : isTablet
-            ? 300
-            : 500,
+        fit: BoxFit.fitHeight,
+        width: isMobile ? double.infinity : screenWidth * 0.4,
+        height: isMobile ? 200 : 400,
       ),
     );
 
